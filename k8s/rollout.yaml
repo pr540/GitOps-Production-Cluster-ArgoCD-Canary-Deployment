@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: demo-app
+  namespace: demo-namespace
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: demo-app
+  template:
+    metadata:
+      labels:
+        app: demo-app
+    spec:
+      containers:
+      - name: demo-app
+        image: argoproj/rollouts-demo:blue
+        ports:
+        - containerPort: 8080
+  strategy:
+    canary:
+      steps:
+      - setWeight: 20
+      - pause: {duration: 1m} # Traffic 20%, pause for 1 minute
+      - setWeight: 40
+      - pause: {} # Pause indefinitely until manually promoted in ArgoCD
+      - setWeight: 80
+      - pause: {duration: 30s}
