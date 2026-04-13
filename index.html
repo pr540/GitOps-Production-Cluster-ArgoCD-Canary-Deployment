@@ -23,29 +23,65 @@
             <div class="hero">
                 <h1>Production Cluster</h1>
                 <p>ArgoCD + Canary Deployments configured correctly.</p>
-                <div class="status-badge">
-                    <span class="pulse"></span> System Operational
+                <div class="status-badge" id="cluster-health">
+                    <span class="pulse"></span> Loading Status...
                 </div>
             </div>
 
             <div class="grid">
                 <div class="card glass">
                     <h3>Service Status</h3>
-                    <p class="value">demo-app-service</p>
-                    <p class="subtext">Port 80 • TCP</p>
+                    <p class="value" id="service-name">Loading...</p>
+                    <p class="subtext" id="service-port">Connecting...</p>
                 </div>
                 <div class="card glass">
                     <h3>Canary Traffic</h3>
-                    <p class="value gradient-text">20%</p>
-                    <p class="subtext">Waiting for manual promotion...</p>
+                    <p class="value gradient-text" id="canary-traffic">--%</p>
+                    <p class="subtext">Live active routing</p>
                 </div>
                 <div class="card glass">
                     <h3>ArgoCD Sync</h3>
-                    <p class="value success">Synced</p>
-                    <p class="subtext">Heathy & Pruned</p>
+                    <p class="value success" id="argo-status">Waiting...</p>
+                    <p class="subtext">Last check: Just now</p>
                 </div>
             </div>
         </main>
     </div>
+
+    <script>
+        // Frontend Logic Tier
+        // Periodically ping the Backend API Tier to get real-time Database updates
+        async function fetchDynamicData() {
+            try {
+                // Call the Vercel Serverless Function (Backend Tier)
+                const response = await fetch('/api/status');
+                const data = await response.json();
+
+                // Update UI (Frontend Tier) with Data
+                document.getElementById('service-name').innerText = data.serviceName;
+                document.getElementById('service-port').innerText = `Port ${data.port} • TCP`;
+                document.getElementById('canary-traffic').innerText = `${data.canaryTraffic}%`;
+                
+                const argoStatusEl = document.getElementById('argo-status');
+                argoStatusEl.innerText = data.argoStatus;
+                if(data.argoStatus === 'Synced') {
+                    argoStatusEl.className = 'value success';
+                } else {
+                    argoStatusEl.className = 'value gradient-text'; // Orange/Red warning look
+                }
+
+                document.getElementById('cluster-health').innerHTML = `
+                    <span class="pulse"></span> ${data.clusterHealth}
+                `;
+
+            } catch (error) {
+                console.error("Backend Error:", error);
+            }
+        }
+
+        // Fetch immediately, then every 3 seconds to test the multi-tier dynamics!
+        fetchDynamicData();
+        setInterval(fetchDynamicData, 3000);
+    </script>
 </body>
 </html>
