@@ -1,23 +1,26 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Rollout
 metadata:
-  name: demo-app
+  name: frontend-ui
   namespace: demo-namespace
 spec:
   replicas: 5
   selector:
     matchLabels:
-      app: demo-app
+      tier: frontend
   template:
     metadata:
       labels:
-        app: demo-app
+        tier: frontend
     spec:
       containers:
-      - name: demo-app
+      - name: frontend
         image: argoproj/rollouts-demo:blue
         ports:
         - containerPort: 8080
+        env:
+        - name: API_ENDPOINT
+          value: "http://backend-service:8080"
   strategy:
     canary:
       steps:
@@ -27,3 +30,16 @@ spec:
       - pause: {} # Pause indefinitely until manually promoted in ArgoCD
       - setWeight: 80
       - pause: {duration: 30s}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: demo-namespace
+spec:
+  selector:
+    tier: frontend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
